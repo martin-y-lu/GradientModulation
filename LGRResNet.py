@@ -88,3 +88,18 @@ class LGRResNet(nn.Module):
         out = out.view(out.size(0), -1)
         out = self.linear(out)
         return out
+
+def LGRResNet18(l=0.01, k=5.0):
+    return LGRResNet(LGRBasicBlock, [2, 2, 2, 2], l=l, k=k)
+
+def LGRResNet34(l=0.01, k=5.0):
+    return LGRResNet(LGRBasicBlock, [3, 4, 6, 3], l=l, k=k)
+
+def LGRResNet50(l=0.01, k=5.0):
+    return LGRResNet(LGRBottleneck, [3, 4, 6, 3], l=l, k=k)
+
+def LGRResNet101(l=0.01, k=5.0):
+    return LGRResNet(LGRBottleneck, [3, 4, 23, 3], l=l, k=k)
+
+def LGRResNet152(l=0.01, k=5.0):
+    return LGRResNet(LGRBottleneck, [3, 8, 36, 3], l=l, k=k)
