@@ -4,10 +4,10 @@ import numpy as np
 import os
 import torch
 
-def train_and_evaluate(activation, train_loader, val_loader, network_class, epochs=10, lr=0.001, log_every=100, device='cpu',
+def train_and_evaluate(network, train_loader, val_loader, epochs=10, lr=0.001, log_every=100, device='cpu',
                        save_path = None, save_every = 5,
                        logger = None):
-    model = network_class(activation).to(device)
+    model = network.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     criterion = torch.nn.CrossEntropyLoss()
 
