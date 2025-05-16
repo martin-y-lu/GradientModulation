@@ -66,7 +66,7 @@ class LGRLinearFunction(torch.autograd.Function):
         ctx.l = l
         ctx.k = k
         lin_output = input @ weight.T + bias
-        ctx.save_for_backward(input, weight, bias, lin_output)
+        ctx.save_for_backward(input, weight, lin_output)
         return F.relu(lin_output)
 
     @staticmethod
@@ -85,11 +85,42 @@ class LGRLinearFunction(torch.autograd.Function):
             relu_mask - torch.sign(lin_output) * kernel
         ) * grad_output
 
-        grad_input = lin_grad_output @ weight
+        grad_input = relu_mask @ weight
         grad_weight = lin_grad_output.T @ input
         grad_bias = lin_grad_output.sum(dim=0)
 
         return grad_input, grad_weight, grad_bias, None, None
+
+class ALGRLinearFunction(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, input, weight, bias, weight_grad_sq, bias_grad_sq, l, k):
+        ctx.l = l
+        ctx.k = k
+        lin_output = input @ weight.T + bias
+        ctx.save_for_backward(input, weight, bias, weight_grad_sq, bias_grad_sq, lin_output)
+        return F.relu(lin_output)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        input, weight, bias, weight_grad_sq, bias_grad_sq, lin_output = ctx.saved_tensors
+        l, k = ctx.l, ctx.k
+
+        # Gradient mask and kernel
+        relu_mask = (lin_output > 0).float()
+        kernel = l / (1 + torch.abs(lin_output) / (l * k))
+
+        # Modulated gradient through activation
+        lin_grad_output = torch.where(
+            grad_output > 0,
+            relu_mask,
+            relu_mask - torch.sign(lin_output) * kernel
+        ) * grad_output
+
+        grad_input = lin_grad_output @ weight
+        grad_weight = lin_grad_output.T @ input
+        grad_bias = lin_grad_output.sum(dim=0)
+
+        return grad_input, grad_weight, grad_bias, None, Nonev
 
 class LGRLinear(nn.Module):
     def __init__(self, in_features, out_features, l=0.01, k=5.0, bias=True):
@@ -149,7 +180,7 @@ class LGRConv2dFunction(Function):
 
         # Compute gradients using autograd.grad-compatible ops
         grad_input = F.grad.conv2d_input(
-            input.shape, weight, lin_grad_output,
+            input.shape, weight, relu_mask,
             ctx.stride, ctx.padding, ctx.dilation, ctx.groups
         )
         grad_weight = F.grad.conv2d_weight(
