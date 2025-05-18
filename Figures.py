@@ -136,8 +136,12 @@ def plot_logs_k_col(logs, colors,prop = "loss",x_axis = "epoch", file_name = Non
                 loss = np.array(log[prop])
             else:
                 loss = extract_batch_metric(log, prop)
+            print("loss shape:",loss.shape)
             # plt.plot(loss, color = mpl.cm.cool(i*0.2))
-            ax.plot(range(e_range[0],e_range[1]),loss[e_range[0]:e_range[1]],color = colors[i])
+            e_range_clip = (e_range[0],min(e_range[1],len(loss)))
+
+                
+            ax.plot(range(e_range_clip[0],e_range_clip[1]),loss[e_range_clip[0]:e_range_clip[1]],color = colors[i])
            
             # plt.plot(loss.numpy(), color = mpl.cm.cool(i*0.2))
         

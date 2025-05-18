@@ -126,7 +126,7 @@ def plot_logs_k(logs, keys,prop = "loss",x_axis = "epoch", file_name = None,i_cu
     if file_name != None:
         plt.savefig(file_name)
 
-def plot_logs_k_col(logs, colors,prop = "loss",x_axis = "epoch", file_name = None,i_cut = 1000, y_scale = "log"):
+def plot_logs_k_col(logs, colors,prop = "loss",x_axis = "epoch", file_name = None,i_cut = 1000,e_range = (0,1000), y_scale = "log"):
     
     # gmodrelu_loss = extract_batch_metric(logs_gmodrelu, "loss")
     fig, ax = plt.subplots(figsize=(8, 5))
@@ -136,8 +136,9 @@ def plot_logs_k_col(logs, colors,prop = "loss",x_axis = "epoch", file_name = Non
                 loss = np.array(log[prop])
             else:
                 loss = extract_batch_metric(log, prop)
+            print("loss shape:",loss.shape)
             # plt.plot(loss, color = mpl.cm.cool(i*0.2))
-            ax.plot(loss,color = colors[i])
+            ax.plot(range(e_range[0],e_range[1]),loss[e_range[0]:e_range[1]],color = colors[i])
            
             # plt.plot(loss.numpy(), color = mpl.cm.cool(i*0.2))
         
@@ -158,7 +159,7 @@ def extract_metric(log,prop,x_axis):
         loss = extract_batch_metric(log, prop)
     return loss
 
-def plot_logs_ke(logs, keys,prop = "loss",x_axis = "epoch",index = 9, title = "TITLE", x_label = "X_LABEL", x_scale = "log", file_name = None,i_cut = 1000, baselines = [[],[]]):
+def plot_logs_ke(logs, keys,prop = "loss",x_axis = "epoch",index = 9, title = "TITLE", x_label = "X_LABEL", x_scale = "log", file_name = None,i_cut = 1000,e_cut = 100000, baselines = [[],[]]):
     cmap = mpl.cm.cool
     norm = mpl.colors.PowerNorm(1,vmin=keys.min(), vmax=keys.max())
     smap = mpl.cm.ScalarMappable(norm=norm, cmap=cmap)
