@@ -7,11 +7,11 @@ from GEDReLU import GEDReLU
 class GEDBasicBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, in_planes, planes, stride=1, l=0.01, k=1.0, p=1.0):
+    def __init__(self, in_planes, planes, stride=1, l=0.01, k1=1.0, k2=1.0, p=1.0, act_class = GEDReLU):
         super().__init__()
         self.is_GED = True
-        self.act1 = GEDReLU(l=l, k=k, p=p)
-        self.act2 = GEDReLU(l=l, k=k, p=p)
+        self.act1 = act_class(l=l, k1=k1, k2=k2, p=p)
+        self.act2 = act_class(l=l, k1=k1, k2=k2, p=p)
 
         self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
@@ -42,12 +42,12 @@ class GEDBasicBlock(nn.Module):
 class GEDBottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self, in_planes, planes, stride=1, l=0.01, k=1.0, p=1.0):
+    def __init__(self, in_planes, planes, stride=1, l=0.01, k1=1.0, k2=1.0, p=1.0, act_class = GEDReLU):
         super().__init__()
         self.is_GED = True
-        self.act1 = GEDReLU(l=l, k=k, p=p)
-        self.act2 = GEDReLU(l=l, k=k, p=p)
-        self.act3 = GEDReLU(l=l, k=k, p=p)
+        self.act1 = act_class(l=l, k1=k1, k2=k2, p=p)
+        self.act2 = act_class(l=l, k1=k1, k2=k2, p=p)
+        self.act3 = act_class(l=l, k1=k1, k2=k2, p=p)
 
         self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
@@ -75,23 +75,24 @@ class GEDBottleneck(nn.Module):
 
 
 class GEDResNet(nn.Module):
-    def __init__(self, block, num_blocks, num_classes=10, l=0.01, k=1.0, p=1.0):
+    def __init__(self, block, num_blocks, num_classes=10, l=0.01, k1=1.0, k2 = 1.0, p=1.0, act_class = GEDReLU):
         super().__init__()
         self.is_GED = True
         self.in_planes = 64
         self.l = l
-        self.k = k
+        self.k1 = k1
+        self.k2 = k2
         self.p = p
 
-        self.act = GEDReLU(l=l, k=k, p=p)
+        self.act = act_class(l=l, k1=k1, k2=k2, p=p)
 
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
 
-        self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1)
-        self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
-        self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
-        self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
+        self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1, act_class = act_class)
+        self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2, act_class = act_class)
+        self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2, act_class = act_class)
+        self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2, act_class = act_class)
 
         self.linear = nn.Linear(512 * block.expansion, num_classes)
         
@@ -100,11 +101,11 @@ class GEDResNet(nn.Module):
             if hasattr(module,"is_GED"):
                 module.update_s(beta)
 
-    def _make_layer(self, block, planes, num_blocks, stride):
+    def _make_layer(self, block, planes, num_blocks, stride, act_class):
         strides = [stride] + [1] * (num_blocks - 1)
         layers = []
         for s in strides:
-            layers.append(block(self.in_planes, planes, s, l=self.l, k=self.k, p=self.p))
+            layers.append(block(self.in_planes, planes, s, l=self.l, k1=self.k1, k2 = self.k2, p=self.p, act_class = act_class))
             self.in_planes = planes * block.expansion
         return nn.Sequential(*layers)
         
@@ -136,17 +137,17 @@ def initialize_ged_resnet(module):
         nn.init.ones_(module.weight)
         nn.init.zeros_(module.bias)
 
-def GEDResNet18(l=0.01, k=1.0, p=1.0):
-    return GEDResNet(GEDBasicBlock, [2, 2, 2, 2], l=l, k=k, p=p)
+def GEDResNet18(l=0.01, k1=1.0, k2=1.0, p=1.0):
+    return GEDResNet(GEDBasicBlock, [2, 2, 2, 2], l=l, k1=k1, k2 = k2, p=p, act_class = act_class)
 
-def GEDResNet34(l=0.01, k=1.0, p=1.0):
-    return GEDResNet(GEDBasicBlock, [3, 4, 6, 3], l=l, k=k, p=p)
+def GEDResNet34(l=0.01, k1=1.0, k2=1.0, p=1.0):
+    return GEDResNet(GEDBasicBlock, [3, 4, 6, 3], l=l,k1=k1, k2 = k2, p=p, act_class = act_class)
 
-def GEDResNet50(l=0.01, k=1.0, p=1.0):
-    return GEDResNet(GEDBottleneck, [3, 4, 6, 3], l=l, k=k, p=p)
+def GEDResNet50(l=0.01, k1=1.0, k2=1.0, p=1.0):
+    return GEDResNet(GEDBottleneck, [3, 4, 6, 3], l=l, k1=k1, k2 = k2, p=p, act_class = act_class)
 
-def GEDResNet101(l=0.01, k=1.0, p=1.0):
-    return GEDResNet(GEDBottleneck, [3, 4, 23, 3], l=l, k=k, p=p)
+def GEDResNet101(l=0.01, k1=1.0, k2=1.0, p=1.0):
+    return GEDResNet(GEDBottleneck, [3, 4, 23, 3], l=l, k1=k1, k2 = k2, p=p, act_class = act_class)
 
-def GEDResNet152(l=0.01, k=1.0, p=1.0):
-    return GEDResNet(GEDBottleneck, [3, 8, 36, 3], l=l, k=k, p=p)
+def GEDResNet152(l=0.01, k1=1.0, k2=1.0, p=1.0):
+    return GEDResNet(GEDBottleneck, [3, 8, 36, 3], l=l, k1=k1, k2 = k2, p=p, act_class = act_class)
