@@ -15,7 +15,7 @@ class GModReLUFunction(torch.autograd.Function):
     """
 
     @staticmethod
-    def forward(ctx, input,l,k, kernel_type = "standard"):
+    def forward(ctx, input,l,k, kernel_type = ["standard"]):
         ctx.save_for_backward(input)
         ctx.l = l 
         ctx.k = k
@@ -26,23 +26,25 @@ class GModReLUFunction(torch.autograd.Function):
     def backward(ctx, grad_output):
         input, = ctx.saved_tensors
         l, k, kernel_type = ctx.l, ctx.k, ctx.kernel_type
+    
+        # Standard ReLU mask
+        positive_mask = (input > 0).float()
         if l == 0 or k == 0:
-            grad_input = (input > 0).float() * grad_output
+            kernel = torch.zeros_like(input)
+        elif "nonscale" in kernel_type:
+            kernel = l/ (1 + torch.abs(input)/(l*k))
         else:
-            # Standard ReLU mask
-            positive_mask = (input > 0).float()
-            if kernel_type == "nonscale" or kernel_type == "nonscalefixed":
-                kernel = l/ (1 + torch.abs(input)/(l*k))
-            else:
-                kernel = l/ (1 + torch.abs(input*grad_output)/(l*k))
+            kernel = l/ (1 + torch.abs(input*grad_output)/(l*k))
+        if "clip" in kernel_type:
+            kernel = kernel*(input < 0).float()
 
-            if kernel_type == "fixed" or kernel_type == "nonscalefixed":
-                grad_input = (positive_mask - torch.sign(input)*kernel)*grad_output
-            else:
-                grad_input = torch.where(
-                    grad_output > 0,
-                    positive_mask,
-                    positive_mask - torch.sign(input)*kernel)*grad_output
+        if "fixed" in kernel_type:
+            grad_input = (positive_mask - torch.sign(input)*kernel)*grad_output
+        else:
+            grad_input = torch.where(
+                grad_output > 0,
+                positive_mask,
+                positive_mask - torch.sign(input)*kernel)*grad_output
             
         return grad_input, None, None, None
 
