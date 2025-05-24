@@ -73,6 +73,16 @@ class GEDBottleneck(nn.Module):
         out = self.act3(out)
         return out
 
+class GEDSequential(nn.Sequential):
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        self.is_GED = True
+    
+    def update_s(self,beta = 0.99):
+        for module in self.children():
+            if hasattr(module,"is_GED"):
+                module.update_s(beta)
+    
 
 class GEDResNet(nn.Module):
     def __init__(self, block, num_blocks, num_classes=10, l=0.01, k1=1.0, k2 = 1.0, p=1.0, act_class = GEDReLU):
@@ -107,7 +117,7 @@ class GEDResNet(nn.Module):
         for s in strides:
             layers.append(block(self.in_planes, planes, s, l=self.l, k1=self.k1, k2 = self.k2, p=self.p, act_class = act_class))
             self.in_planes = planes * block.expansion
-        return nn.Sequential(*layers)
+        return GEDSequential(*layers)
         
 
     def forward(self, x):
@@ -137,17 +147,17 @@ def initialize_ged_resnet(module):
         nn.init.ones_(module.weight)
         nn.init.zeros_(module.bias)
 
-def GEDResNet18(l=0.01, k1=1.0, k2=1.0, p=1.0):
+def GEDResNet18(l=0.01, k1=1.0, k2=1.0, p=1.0, act_class = GEDReLU):
     return GEDResNet(GEDBasicBlock, [2, 2, 2, 2], l=l, k1=k1, k2 = k2, p=p, act_class = act_class)
 
-def GEDResNet34(l=0.01, k1=1.0, k2=1.0, p=1.0):
+def GEDResNet34(l=0.01, k1=1.0, k2=1.0, p=1.0, act_class = GEDReLU):
     return GEDResNet(GEDBasicBlock, [3, 4, 6, 3], l=l,k1=k1, k2 = k2, p=p, act_class = act_class)
 
-def GEDResNet50(l=0.01, k1=1.0, k2=1.0, p=1.0):
+def GEDResNet50(l=0.01, k1=1.0, k2=1.0, p=1.0, act_class = GEDReLU):
     return GEDResNet(GEDBottleneck, [3, 4, 6, 3], l=l, k1=k1, k2 = k2, p=p, act_class = act_class)
 
-def GEDResNet101(l=0.01, k1=1.0, k2=1.0, p=1.0):
+def GEDResNet101(l=0.01, k1=1.0, k2=1.0, p=1.0, act_class = GEDReLU):
     return GEDResNet(GEDBottleneck, [3, 4, 23, 3], l=l, k1=k1, k2 = k2, p=p, act_class = act_class)
 
-def GEDResNet152(l=0.01, k1=1.0, k2=1.0, p=1.0):
+def GEDResNet152(l=0.01, k1=1.0, k2=1.0, p=1.0, act_class = GEDReLU):
     return GEDResNet(GEDBottleneck, [3, 8, 36, 3], l=l, k1=k1, k2 = k2, p=p, act_class = act_class)
