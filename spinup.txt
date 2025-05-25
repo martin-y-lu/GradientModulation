@@ -1,0 +1,4 @@
+git clone https://github.com/martin-y-lu/GradientModulation
+pip install --upgrade matplotlib
+pip install "numpy<2"
+pip install tqdm
