@@ -1,7 +1,7 @@
 #Most basic form of eventual gradient clipping; kill all eventuals on the layer if the dot with gradient is negative
 import torch
 import torchvision
-class GEDReLUFunction(torch.autograd.Function):
+class GEDGELUFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input, S_n_n, S_n_p, Gi, l, k1, k2, p = 1):
         ctx.l = l
@@ -9,7 +9,7 @@ class GEDReLUFunction(torch.autograd.Function):
         ctx.k2 = k2
         ctx.p = p
         ctx.save_for_backward(input, S_n_n, S_n_p, Gi)
-        return F.relu(input)
+        return F.gelu(input)
     # @staticmethod
     # def forward(ctx, input):
     #     # ctx.l = l
@@ -37,7 +37,7 @@ class GEDReLUFunction(torch.autograd.Function):
         Gi = Gi
         
         # Gradient mask and kernel
-        relu_mask = (input > 0).float()
+        relu_mask =  0.5*(torch.erf(input/np.sqrt(2))+1) + input/np.sqrt(2*np.pi)*torch.exp(-input*input/2)
         kernel = torch.where(input*grad_output > 0,
             torch.zeros_like(input) if l*k1 == 0 else l / (1 + torch.abs(input) / (l * k1)),
             torch.zeros_like(input) if l*k2 == 0 else l / (1 + torch.abs(input) / (l * k2)),
@@ -76,7 +76,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class GEDReLU(nn.Module):
+class GEDGELU(nn.Module):
     def __init__(self, shape = None, l=0.01, k1=1, k2 = 1, p=1.0):
         super().__init__()
         self.l = l
@@ -108,7 +108,7 @@ class GEDReLU(nn.Module):
             self.S_n_n.is_GED = True
             self.S_n_p.is_GED = True
             self.Gi.is_GED = True
-        return GEDReLUFunction.apply(input, self.S_n_n, self.S_n_p, self.Gi, self.l, self.k1, self.k2, self.p)
+        return GEDGELUFunction.apply(input, self.S_n_n, self.S_n_p, self.Gi, self.l, self.k1, self.k2, self.p)
         # return GEDReLUFunction.apply(input)
 
     def update_s(self, beta=0.9):

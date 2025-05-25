@@ -56,8 +56,8 @@ class GEDReLUFunction(torch.autograd.Function):
 
         dots = torch.sum(gated_eventual_input*Gi,dim = [d for d in  range(1,len(gated_eventual_input.shape))])
         ev_t = torch.transpose(gated_eventual_input,0,len(gated_eventual_input.shape)-1)
-        ev_f_t = torch.transpose(torch.where(gated_eventual_input*Gi>0,gated_eventual_input,0),0,len(gated_eventual_input.shape)-1)
-        gated_eventual_input = torch.transpose(torch.where( dots> 0, ev_t, ev_f_t),0,len(gated_eventual_input.shape)-1)
+        # ev_f_t = torch.transpose(torch.where(gated_eventual_input*Gi>0,gated_eventual_input,0),0,len(gated_eventual_input.shape)-1)
+        gated_eventual_input = torch.transpose(torch.where( dots>= 0, ev_t, 0),0,len(gated_eventual_input.shape)-1)
         
         # S_n = S_n_n + S_n_p
         # S_n_c = S_n*(S_n< 0).float()
